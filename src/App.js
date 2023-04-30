@@ -24,6 +24,13 @@ function App() {
   const [option4, setOption4] = useState("Loading option...");
   const [questionText, setQuestionText] = useState("Loading question...");
   const [questionCount, setQuestionCount] = useState(0);
+  const [answerCheck, setAnswerCheck] = useState(-1);
+  const [readingTime, setReadingTime] = useState(0);
+  const [answerTime, setAnswerTime] = useState(0);
+  const [totalScores, setTotalScores] = useState(0);
+  const [conCorrectAns, setConCorrectAns] = useState(0);
+  const [totalCorrectAns, setTotalCorrectAns] = useState(0);
+  const [userHighestScore, setUserHighestScore] = useState(0);
 
   const Authorization = async () => {
 
@@ -233,7 +240,15 @@ function App() {
                 </div>
 
                 <div className="text-light mb-1" id="quiz-timer">
-                  <span id="timer-display">Reading Time Left: 10</span> second(s)
+                  {
+                    readingTime !== 0 &&
+                    <span>Reading Time Left: {readingTime} second(s)</span> 
+                  }
+
+                  {
+                    answerTime !== 0 &&
+                    <span>Answer Time Left: {answerTime} second(s)</span> 
+                  }
 
                   <div className="" id="tips">
                     Tips: The quicker you answer, the more scores you get.
@@ -279,17 +294,17 @@ function App() {
                 <div className="box-design text-light" id="player-scores">
                   <div className="score-section">
                     Total Scores:
-                    <span id="total-scores">0</span>
+                    <span className="pl-2">{totalScores}</span>
                   </div>
 
                   <div className="score-section">
                     Continuous Correct Answer:
-                    <span id="continuous-correct">0</span>
+                    <span className="pl-2">{conCorrectAns}</span>
                   </div>
 
                   <div className="score-section">
                     Total Correct Answer:
-                    <span id="total-correct">0</span>
+                    <span className="pl-2">{totalCorrectAns}</span>
                   </div>
                 </div>
 
