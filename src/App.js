@@ -31,6 +31,8 @@ function App() {
   const [conCorrectAns, setConCorrectAns] = useState(0);
   const [totalCorrectAns, setTotalCorrectAns] = useState(0);
   const [userHighestScore, setUserHighestScore] = useState(0);
+  var rankingCount = 0;
+
 
   const Authorization = async () => {
 
@@ -43,11 +45,11 @@ function App() {
         await get(child(dbRef, `users/${username}`)).then((snapshot) => {
           if (snapshot.exists()) {
             if(username === snapshot.val().username && hashCode(password) === snapshot.val().password){
-              console.log("Login Successful!");
-
+              setModalVisible(false);
+              readQuestion();
             }
             else{
-              
+              setAuthorizationMessage("Invalid username or password!");
             }
           } 
           else {
@@ -91,7 +93,9 @@ function App() {
   };
 
   const readQuestion = async () => {
-
+    if(displayRankingBoard){
+      rankingBoard();
+    }
   };
 
   const rankingBoard = () => {
@@ -334,6 +338,24 @@ function App() {
                         100
                       </div>
                     </div>  */}
+                    
+                    {
+                      scoreRanking.map((ranking) => {
+                        rankingCount++;
+
+                        return(
+                          <div className="row mt-1">
+                            <div className="col text-left ranking-username">
+                              {rankingCount + ") " + ranking.username}
+                            </div>
+
+                            <div className="col text-center">
+                              {ranking.highestScore}
+                            </div>
+                          </div>
+                        )
+                      })
+                    }
                   </div>
 
                 </div>

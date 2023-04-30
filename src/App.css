@@ -117,6 +117,11 @@
   font-weight: bold;
 }
 
+.ranking-username{
+  font-weight: bold;
+  padding-left: 25px;
+}
+
 @media (min-width: 1200px){
   #start-input-container, #end-input-container{
       width: 600px;
