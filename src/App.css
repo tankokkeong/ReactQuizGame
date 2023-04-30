@@ -82,9 +82,9 @@
   background-color: white;
   width: 80%;
   position: absolute;
-  top: 50%;
+  top: 40%;
   left: 50%;
-  transform: translate(-50%, -30%);
+  transform: translate(-50%, -50%);
   z-index: 2000;
   border-radius: 20px;
   padding: 20px;
@@ -117,19 +117,10 @@
   font-weight: bold;
 }
 
-@media(min-width: 600px){
-  #start-input-container, #end-input-container{
-      width: 600px;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-  }
-}
-
 @media (min-width: 1200px){
   #start-input-container, #end-input-container{
       width: 600px;
-      top: 50%;
+      top: 300px;
       left: 50%;
       transform: translate(-50%, -50%);
   }
