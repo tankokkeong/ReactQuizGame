@@ -50,6 +50,7 @@ function App() {
           if (snapshot.exists()) {
             if(username === snapshot.val().username && hashCode(password) === snapshot.val().password){
               setModalVisible(false);
+              setUserHighestScore(snapshot.val().highestScore);
               readQuestion();
             }
             else{
@@ -168,7 +169,7 @@ function App() {
 
       setAnswerStatusDisplay(true);
       setAnswerStatus("Correct");
-      setTimeout(removeAnswerStatus, 3000);
+      setTimeout(removeAnswerStatus, 1000);
     }
     else{
       const updates = {};
@@ -178,7 +179,7 @@ function App() {
 
       setAnswerStatusDisplay(true);
       setAnswerStatus("Wrong");
-      setTimeout(removeAnswerStatus, 3000);
+      setTimeout(removeAnswerStatus, 1000);
     }
   };
 
@@ -400,7 +401,7 @@ function App() {
                       : <i className="fa fa-times text-danger answer-status-mark" aria-hidden="true"></i>
                       }
                     </span>
-                    <span id="answer-status-display">{answerStatus}</span>
+                    <span id="answer-status-display" className="pl-2">{answerStatus}</span>
                   </div>
                 }
 
