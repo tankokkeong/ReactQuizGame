@@ -13,9 +13,7 @@ function App() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [userAction, setUserAction] = useState("None");
-  const [checkboxEnabled, setCheckboxEnabled] = useState(false);
   const [authorizationMessage, setAuthorizationMessage] = useState("");
-  const [modalVisible, setModalVisible] = useState(true);
   const [scoreRanking, setScoreRanking] = useState([]);
   const [displayRankingBoard, setDisplayRankingBoard] = useState(true);
   const [option1, setOption1] = useState("Loading option...");
@@ -23,6 +21,7 @@ function App() {
   const [option3, setOption3] = useState("Loading option...");
   const [option4, setOption4] = useState("Loading option...");
   const [questionText, setQuestionText] = useState("Loading question...");
+  const [currentAnswer, setCurrentAnswer] = useState("");
   const [questionCount, setQuestionCount] = useState(0);
   const [answerCheck, setAnswerCheck] = useState(-1);
   const [readingTime, setReadingTime] = useState(0);
@@ -31,8 +30,13 @@ function App() {
   const [conCorrectAns, setConCorrectAns] = useState(0);
   const [totalCorrectAns, setTotalCorrectAns] = useState(0);
   const [userHighestScore, setUserHighestScore] = useState(0);
+  const [modalVisible, setModalVisible] = useState(true);
+  const [endGameModalVisible, setEndGameModalVisible] = useState(false);
+  const [isRestartGame, setIsRestartGame] = useState(false);
+  const [answerStatus, setAnswerStatus] = useState("");
+  const [answerStatusDisplay, setAnswerStatusDisplay] = useState(false);
+  const questionGiven = 20;
   var rankingCount = 0;
-
 
   const Authorization = async () => {
 
@@ -89,12 +93,92 @@ function App() {
       }
     }
     
-    console.log(username, password)
   };
 
   const readQuestion = async () => {
+
+    setIsRestartGame(false);
+
     if(displayRankingBoard){
       rankingBoard();
+    }
+
+    //Block the option
+    setAnswerCheck(-1);
+
+    if(questionCount < questionGiven){
+      //Read question
+      var randomQuestion = Math.floor(Math.random() * 151) + 1;
+      setQuestionCount(questionCount + 1);
+      await get(child(dbRef, `Questions/${"Question-" + randomQuestion}`)).then((snapshot) => {
+        if (snapshot.exists()) {
+          // console.log(snapshot.val())
+          setQuestionText(snapshot.val().question);
+          setOption1(snapshot.val().option_1);
+          setOption2(snapshot.val().option_2);
+          setOption3(snapshot.val().option_3);
+          setOption4(snapshot.val().option_4);
+          setCurrentAnswer(snapshot.val().answer);
+          setReadingTime(10);
+        } else {
+          console.log("No data available");
+        }
+      }).catch((error) => {
+        console.error(error);
+      });
+    }
+    else{
+      setEndGameModalVisible(true);
+    }
+  };
+
+  const answerQuestion = async (answer) => {
+    setAnswerCheck(answer);
+    // console.log("Answer given: " + answer)
+    if(answer === currentAnswer){
+      //Score calculation
+      var scoreOfTheRound;
+
+      if(answerTime >= 10){
+          scoreOfTheRound = 5 + (answerTime - 10) + conCorrectAns;
+      }
+      else{
+          scoreOfTheRound = 0;
+      }
+
+      var newTotal = totalScores + scoreOfTheRound;
+
+      const updates = {};
+      updates[`users/${username}/continuousCorrect`] = conCorrectAns + 1;
+      updates[`users/${username}/highestScore`] = newTotal > userHighestScore ? newTotal : userHighestScore;
+      updates[`users/${username}/scores`] = newTotal;
+      updates[`users/${username}/totalCorrect`] = totalCorrectAns + 1;
+
+      await update(ref(db), updates);
+
+      //Check the highest score
+      if(newTotal > userHighestScore){
+        setUserHighestScore(newTotal);
+      }
+      
+      //Increase the total correct
+      setTotalCorrectAns(totalCorrectAns + 1);
+      setConCorrectAns(conCorrectAns + 1);
+      setTotalScores(newTotal);
+
+      setAnswerStatusDisplay(true);
+      setAnswerStatus("Correct");
+      setTimeout(removeAnswerStatus, 3000);
+    }
+    else{
+      const updates = {};
+      setConCorrectAns(0);
+      updates[`users/${username}/continuousCorrect`] =  0;
+      await update(ref(db), updates);
+
+      setAnswerStatusDisplay(true);
+      setAnswerStatus("Wrong");
+      setTimeout(removeAnswerStatus, 3000);
     }
   };
 
@@ -116,9 +200,71 @@ function App() {
     setDisplayRankingBoard(false);
   };
 
+  function displayReadingTimer(){
+    setReadingTime(readingTime - 1);
+
+    if(readingTime - 1 === 0){
+      setAnswerTime(15);
+      setAnswerCheck(0);
+    }
+  }
+
+  function displayAnswerTimer(){
+
+    setAnswerTime(answerTime - 1);
+
+    if(answerTime - 1 === 0){
+      readQuestion();
+    }
+  }
+
+  const quitGame = () => {
+    setAnswerCheck(-1);
+    setAnswerTime(0);
+    setReadingTime(0);
+    setModalVisible(true);
+    setEndGameModalVisible(false);
+
+    //Reset scores
+    setQuestionCount(0);
+    setTotalCorrectAns(0);
+    setTotalScores(0);
+    setConCorrectAns(0);
+  };
+
+  const restartGame = () => {
+    setQuestionCount(0);
+    setIsRestartGame(true);
+    setAnswerCheck(-1);
+    setAnswerTime(0);
+    setReadingTime(0);
+    setEndGameModalVisible(false);
+
+    //Reset scores
+    setQuestionCount(0);
+    setTotalCorrectAns(0);
+    setTotalScores(0);
+    setConCorrectAns(0);
+  };
+
+  const removeAnswerStatus = () => {
+    setAnswerStatusDisplay(false);
+  };
 
   useEffect(() => {
 
+    if(isRestartGame){
+      readQuestion();
+    }
+
+    if(readingTime !== 0){
+      const interval = setInterval(() => displayReadingTimer(), 1000);
+      return () => clearInterval(interval);
+    }
+    else if(answerTime !== 0){
+      const interval = setInterval(() => displayAnswerTimer(), 1000);
+      return () => clearInterval(interval);
+    }
   });
 
   return (
@@ -189,44 +335,51 @@ function App() {
           </div>
         }
 
-        <div id="end-game-container" style={{display: "none"}}></div>
+        {
+          endGameModalVisible && 
+          <div>
+              <div id="end-game-container"></div>
 
-        <div id="end-input-container" style={{display: "none"}}>
-          <div className="text-center mt-3">
-            <h4>The Quiz Game Is Over!</h4>
+              <div id="end-input-container">
+                <div className="text-center mt-3">
+                  <h4>The Quiz Game Is Over!</h4>
+                </div>
+
+                <div className="mt-3 mb-3 text-center" id="total-scores-end">
+                  
+                </div>
+
+                <div className="text-center">
+                  <button className="btn btn-success mr-2" onClick={restartGame}>Play Again</button>
+                  <button className="btn btn-danger" onClick={quitGame}>Quit Game</button>
+                </div>
+
+                <div className="mt-3">
+                  <div className="text-center mb-2">
+                    <strong>Game Rules:</strong> 
+                  </div>
+
+                  <p>
+                    1) There will be a total of 20 questions to answer, questions will be selected randomly from the database.
+                  </p>
+
+                  <p>
+                    2) The scores that you get for every correct answer will be dependent on the time that you use, the quicker you answer, the more scores you will get from it.
+                  </p>
+
+                  <p>
+                    3) The more you answer correctly continuously, the more points you can get for the next correct answer. Every extra continuous correct answer will add extra one mark for the next correct answer.
+                  </p>
+
+                  <p>
+                    4) Any answer that is given later than 5 seconds, no scores will be given, but it will be counted as a continuous correct answer.
+                  </p>
+
+                </div>
+              </div>
           </div>
+        }
 
-          <div className="mt-3 mb-3 text-center" id="total-scores-end">
-            
-          </div>
-
-          <div className="text-center">
-            <button className="btn btn-success" id="play-again-btn">Play Again</button>
-          </div>
-
-          <div className="mt-3">
-            <div className="text-center mb-2">
-              <strong>Game Rules:</strong> 
-            </div>
-
-            <p>
-              1) There will be a total of 20 questions to answer, questions will be selected randomly from the database.
-            </p>
-
-            <p>
-              2) The scores that you get for every correct answer will be dependent on the time that you use, the quicker you answer, the more scores you will get from it.
-            </p>
-
-            <p>
-              3) The more you answer correctly continuously, the more points you can get for the next correct answer. Every extra continuous correct answer will add extra one mark for the next correct answer.
-            </p>
-
-            <p>
-              4) Any answer that is given later than 5 seconds, no scores will be given, but it will be counted as a continuous correct answer.
-            </p>
-
-          </div>
-        </div>
 
         <div id="quiz-container">
             <div className="pt-1 pb-1 text-center text-light" id="quiz-header">
@@ -236,12 +389,20 @@ function App() {
             <div className="row quiz-row">
               <div className="col-sm-8 col-xl-9" id="quiz-col">
 
-                <div id="answer-status" className="text-center" style={{display: "none"}}>
-                  {/* <i className="fa fa-times text-danger answer-status-mark" aria-hidden="true"></i>
-                  <i className="fa fa-check-circle text-success answer-status-mark" aria-hidden="true"></i>  */}
-                  <span id="answer-icon-display"></span>
-                  <span id="answer-status-display"></span>
-                </div>
+                {
+                  answerStatusDisplay && 
+                  <div id="answer-status" className="text-center">
+                    {/* <i className="fa fa-times text-danger answer-status-mark" aria-hidden="true"></i>
+                    <i className="fa fa-check-circle text-success answer-status-mark" aria-hidden="true"></i>  */}
+                    <span id="answer-icon-display">
+                      {answerCheck === currentAnswer 
+                      ? <i className="fa fa-check-circle text-success answer-status-mark" aria-hidden="true"></i>
+                      : <i className="fa fa-times text-danger answer-status-mark" aria-hidden="true"></i>
+                      }
+                    </span>
+                    <span id="answer-status-display">{answerStatus}</span>
+                  </div>
+                }
 
                 <div className="text-light mb-1" id="quiz-timer">
                   {
@@ -265,28 +426,48 @@ function App() {
                   </div>
 
                   <div className="option">
-                    <input type="checkbox" className="option-input" disabled={checkboxEnabled} />
+                    <input type="checkbox" 
+                    className="option-input mr-2" 
+                    disabled={answerCheck !== 0 || option1 === "Loading option..."} 
+                    onClick={() => answerQuestion(option1)}
+                    checked={answerCheck === option1}
+                    />
                     <span id="option-1">
                       {option1}
                     </span>
                   </div>
 
                   <div className="option">
-                    <input type="checkbox" className="option-input" disabled={checkboxEnabled} />
+                    <input type="checkbox" 
+                    className="option-input mr-2" 
+                    disabled={answerCheck !== 0 || option2 === "Loading option..."} 
+                    onClick={() => answerQuestion(option2)}
+                    checked={answerCheck === option2}
+                    />
                     <span id="option-2">              
                       {option2}
                     </span>
                   </div>
 
                   <div className="option">
-                    <input type="checkbox" className="option-input" disabled={checkboxEnabled} />
+                    <input type="checkbox" 
+                    className="option-input mr-2" 
+                    disabled={answerCheck !== 0 || option3 === "Loading option..."} 
+                    onClick={() => answerQuestion(option3)}
+                    checked={answerCheck === option3}
+                    />
                     <span id="option-3">
                       {option3}
                     </span>
                   </div>
 
                   <div className="option">
-                    <input type="checkbox" className="option-input" disabled={checkboxEnabled} />
+                    <input type="checkbox" 
+                    className="option-input mr-2" 
+                    disabled={answerCheck !== 0 || option4 === "Loading option..."} 
+                    onClick={() => answerQuestion(option4)}
+                    checked={answerCheck === option4}
+                    />
                     <span id="option-4">              
                       {option4}
                     </span>
